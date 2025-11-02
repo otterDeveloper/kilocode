@@ -20,7 +20,7 @@ export interface StreamingConfig {
 	language?: string
 	maxChunks?: number
 	hotWordEnabled?: boolean // default false - enable auto-send on hot word detection
-	hotWordPhrase?: string // default "send the command" - phrase to trigger auto-send
+	hotWordPhrase?: string // default "kilo code send" - phrase to trigger auto-send
 }
 
 /**
@@ -63,6 +63,19 @@ export interface TranscriptionOptions {
 	language?: string
 	model?: string
 	responseFormat?: "json" | "text" | "srt" | "verbose_json" | "vtt"
+	/**
+	 * Optional text to guide the model's style or continue a previous audio segment.
+	 * The prompt should match the audio language and can include:
+	 * - Custom vocabulary (product names, technical terms, proper nouns)
+	 * - Previous transcript text for chunk stitching
+	 * - Style guidance (punctuation, casing)
+	 *
+	 * Limitations:
+	 * - Only last ~224 tokens are used
+	 * - Works best with natural-looking text
+	 * - Cannot force content not in the audio
+	 */
+	prompt?: string
 }
 
 /**

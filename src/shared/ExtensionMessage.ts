@@ -168,7 +168,9 @@ export interface ExtensionMessage {
 		| "speechStreamingStopped" // kilocode_change: Real-time streaming recording stopped
 		| "speechStreamingError" // kilocode_change: Real-time streaming error occurred
 		| "speechHotWordDetected" // kilocode_change: Hot word detected - auto-send triggered
+		| "speechVolumeUpdate" // kilocode_change: Real-time volume level update during recording
 	text?: string
+	volume?: number // kilocode_change: Volume level 0-1 for speechVolumeUpdate
 	// kilocode_change start
 	payload?:
 		| ProfileDataResponsePayload

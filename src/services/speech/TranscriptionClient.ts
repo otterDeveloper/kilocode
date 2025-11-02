@@ -68,11 +68,14 @@ export class TranscriptionClient implements ITranscriptionClient {
 			file: audioFile,
 			model: options?.model || "whisper-1",
 			language: options?.language || undefined,
+			prompt: options?.prompt || undefined,
 			response_format: options?.responseFormat || "verbose_json",
 		})
 
+		// Handle empty transcription gracefully (silent audio, background noise, etc.)
 		if (!transcription.text?.trim()) {
-			throw new Error("No transcription text received")
+			console.log(`[TranscriptionClient] ⚠️ No transcription text received for ${fileName} (likely silent audio)`)
+			return "" // Return empty string instead of throwing - allows streaming to continue
 		}
 
 		return transcription.text.trim()

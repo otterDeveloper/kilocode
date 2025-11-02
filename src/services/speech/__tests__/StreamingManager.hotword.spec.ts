@@ -1,6 +1,7 @@
 // kilocode_change - new file: Hot word detection tests for StreamingManager
 import { describe, it, expect, beforeEach } from "vitest"
 import { StreamingManager } from "../StreamingManager"
+import { HOT_WORD_PHRASE } from "../speechConstants"
 
 describe("StreamingManager - Hot Word Detection", () => {
 	let manager: StreamingManager
@@ -41,8 +42,8 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should detect hot word case-insensitively", () => {
-			manager.configureHotWord(true, "send the command")
-			manager.addChunkText(0, "hello SEND THE COMMAND world")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
+			manager.addChunkText(0, `hello ${HOT_WORD_PHRASE.toUpperCase()} world`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -50,8 +51,8 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should remove hot word from beginning of text", () => {
-			manager.configureHotWord(true, "send the command")
-			manager.addChunkText(0, "send the command hello world")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
+			manager.addChunkText(0, `${HOT_WORD_PHRASE} hello world`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -59,8 +60,8 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should remove hot word from end of text", () => {
-			manager.configureHotWord(true, "send the command")
-			manager.addChunkText(0, "hello world send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
+			manager.addChunkText(0, `hello world ${HOT_WORD_PHRASE}`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -68,8 +69,8 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should remove hot word from middle of text", () => {
-			manager.configureHotWord(true, "send the command")
-			manager.addChunkText(0, "hello send the command world")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
+			manager.addChunkText(0, `hello ${HOT_WORD_PHRASE} world`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -77,16 +78,16 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should not detect hot word when disabled", () => {
-			manager.configureHotWord(false, "send the command")
-			manager.addChunkText(0, "hello send the command world")
+			manager.configureHotWord(false, HOT_WORD_PHRASE)
+			manager.addChunkText(0, `hello ${HOT_WORD_PHRASE} world`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(false)
-			expect(result.cleanedText).toBe("hello send the command world")
+			expect(result.cleanedText).toBe(`hello ${HOT_WORD_PHRASE} world`)
 		})
 
 		it("should not detect partial matches", () => {
-			manager.configureHotWord(true, "send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
 			manager.addChunkText(0, "hello send the comma world")
 
 			const result = manager.checkHotWord()
@@ -95,7 +96,7 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should handle empty session text", () => {
-			manager.configureHotWord(true, "send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(false)
@@ -103,8 +104,8 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should handle text with only hot word", () => {
-			manager.configureHotWord(true, "send the command")
-			manager.addChunkText(0, "send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
+			manager.addChunkText(0, HOT_WORD_PHRASE)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -112,9 +113,9 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should detect hot word across multiple chunks", () => {
-			manager.configureHotWord(true, "send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
 			manager.addChunkText(0, "hello world")
-			manager.addChunkText(1, "more text send the command")
+			manager.addChunkText(1, `more text ${HOT_WORD_PHRASE}`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -131,10 +132,10 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should preserve hot word configuration after reset", () => {
-			manager.configureHotWord(true, "send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
 			manager.addChunkText(0, "hello world")
 			manager.reset()
-			manager.addChunkText(0, "new text send the command")
+			manager.addChunkText(0, `new text ${HOT_WORD_PHRASE}`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -142,8 +143,8 @@ describe("StreamingManager - Hot Word Detection", () => {
 		})
 
 		it("should handle multiple spaces around hot word", () => {
-			manager.configureHotWord(true, "send the command")
-			manager.addChunkText(0, "hello   send the command   world")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
+			manager.addChunkText(0, `hello   ${HOT_WORD_PHRASE}   world`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
@@ -153,17 +154,17 @@ describe("StreamingManager - Hot Word Detection", () => {
 
 	describe("integration with deduplication", () => {
 		it("should detect hot word after deduplication", () => {
-			manager.configureHotWord(true, "send the command")
+			manager.configureHotWord(true, HOT_WORD_PHRASE)
 
 			// First chunk
 			manager.addChunkText(0, "hello world")
 
 			// Second chunk with overlap and hot word
-			manager.addChunkText(1, "world send the command")
+			manager.addChunkText(1, `world ${HOT_WORD_PHRASE}`)
 
 			const result = manager.checkHotWord()
 			expect(result.detected).toBe(true)
-			// "world" should be deduplicated, leaving "hello world send the command"
+			// "world" should be deduplicated, leaving "hello world ${HOT_WORD_PHRASE}"
 			// After removing hot word: "hello world"
 			expect(result.cleanedText).toBe("hello world")
 		})

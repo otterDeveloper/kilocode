@@ -41,8 +41,12 @@ function calculateTargetHeights(volume: number): number[] {
  * Features:
  * - 5 vertical bars with staggered heights based on volume
  * - Smooth spring-like animation with easing
- * - Red color when active, gray when inactive
+ * - Yellow color when active, gray when inactive
  * - Responsive to volume changes (0-1 scale)
+ * - Simulated animation when no real volume data available
+ *
+ * TODO: Hook up to real FFmpeg volume data via astats filter
+ * Currently using simulated animation until FFmpeg volume metering is implemented
  */
 export function VolumeVisualizer({ volume, isActive = true, className }: VolumeVisualizerProps) {
 	const [barHeights, setBarHeights] = useState<number[]>(new Array(BAR_COUNT).fill(MIN_HEIGHT_PERCENT))
@@ -53,37 +57,48 @@ export function VolumeVisualizer({ volume, isActive = true, className }: VolumeV
 	})
 
 	useEffect(() => {
+		if (!isActive) {
+			// Reset to minimum when inactive
+			setBarHeights(new Array(BAR_COUNT).fill(MIN_HEIGHT_PERCENT))
+			return
+		}
+
 		const state = animationRef.current
 
-		state.targetHeights = calculateTargetHeights(volume)
+		// Simulate volume animation when active (until real FFmpeg data is available)
+		// Generate random target heights that create a wave-like pattern
+		const simulateVolume = () => {
+			const time = Date.now() / 1000
+			const baseVolume = 0.3 + Math.sin(time * 2) * 0.2 // Oscillate between 0.1 and 0.5
+			state.targetHeights = calculateTargetHeights(baseVolume)
+		}
 
 		const animate = () => {
-			let hasChanges = false
+			if (!isActive) {
+				state.frameId = null
+				return
+			}
+
+			// Update target heights periodically for simulation
+			simulateVolume()
 
 			const newHeights = state.currentHeights.map((current, i) => {
 				const target = state.targetHeights[i]
 				const diff = target - current
 
 				if (Math.abs(diff) > ANIMATION_THRESHOLD) {
-					hasChanges = true
 					return current + diff * EASING
 				}
 
 				return current
 			})
 
-			if (hasChanges) {
-				state.currentHeights = newHeights
-				setBarHeights(newHeights.map((h) => Math.max(MIN_HEIGHT_PERCENT, h * 100)))
-				state.frameId = requestAnimationFrame(animate)
-			} else {
-				state.frameId = null
-			}
-		}
-
-		if (state.frameId === null) {
+			state.currentHeights = newHeights
+			setBarHeights(newHeights.map((h) => Math.max(MIN_HEIGHT_PERCENT, h * 100)))
 			state.frameId = requestAnimationFrame(animate)
 		}
+
+		state.frameId = requestAnimationFrame(animate)
 
 		return () => {
 			if (state.frameId !== null) {
@@ -91,7 +106,7 @@ export function VolumeVisualizer({ volume, isActive = true, className }: VolumeV
 				state.frameId = null
 			}
 		}
-	}, [volume])
+	}, [isActive])
 
 	return (
 		<div

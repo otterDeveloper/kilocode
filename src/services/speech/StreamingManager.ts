@@ -1,6 +1,7 @@
 // kilocode_change - new file: Streaming text deduplication and session management
 
 import { IStreamingManager } from "./types"
+import { HOT_WORD_PHRASE } from "./speechConstants"
 
 /**
  * StreamingManager - Manages streaming transcription state and text deduplication
@@ -15,14 +16,14 @@ export class StreamingManager implements IStreamingManager {
 	private sessionText: string = ""
 	private previousChunkText: string = ""
 	private hotWordEnabled: boolean = false
-	private hotWordPhrase: string = "send the command"
+	private hotWordPhrase: string = HOT_WORD_PHRASE
 
 	/**
 	 * Configure hot word detection
 	 * @param enabled Whether hot word detection is enabled
-	 * @param phrase The phrase to detect (default: "send the command")
+	 * @param phrase The phrase to detect (default: from HOT_WORD_PHRASE constant)
 	 */
-	configureHotWord(enabled: boolean, phrase: string = "send the command"): void {
+	configureHotWord(enabled: boolean, phrase: string = HOT_WORD_PHRASE): void {
 		this.hotWordEnabled = enabled
 		this.hotWordPhrase = phrase.toLowerCase()
 		console.log(`[StreamingManager] Hot word detection ${enabled ? "enabled" : "disabled"}: "${phrase}"`)

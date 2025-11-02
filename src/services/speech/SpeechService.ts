@@ -11,6 +11,7 @@ import { TranscriptionClient } from "./TranscriptionClient"
 import { ChunkProcessor } from "./ChunkProcessor"
 import { StreamingManager } from "./StreamingManager"
 import { SpeechState, StreamingConfig, ProgressiveResult, VolumeSample } from "./types"
+import { HOT_WORD_PHRASE, WHISPER_CUSTOM_GLOSSARY, DEFAULT_STREAMING_CONFIG } from "./speechConstants"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 
 // Re-export types for external use
@@ -42,14 +43,7 @@ export class SpeechService extends EventEmitter {
 	// Streaming state
 	private streamingDir: string | null = null
 	private processedChunks: number = 0
-	private streamingConfig: Required<StreamingConfig> = {
-		chunkDurationSeconds: 3,
-		overlapDurationSeconds: 1,
-		language: "en",
-		maxChunks: 0,
-		hotWordEnabled: false,
-		hotWordPhrase: "send the command",
-	}
+	private streamingConfig: Required<StreamingConfig> = DEFAULT_STREAMING_CONFIG
 
 	private constructor(providerSettingsManager: ProviderSettingsManager) {
 		super()
@@ -106,12 +100,13 @@ export class SpeechService extends EventEmitter {
 
 			// Merge config
 			this.streamingConfig = {
-				chunkDurationSeconds: config?.chunkDurationSeconds ?? 3,
-				overlapDurationSeconds: config?.overlapDurationSeconds ?? 1,
-				language: config?.language ?? "en",
-				maxChunks: config?.maxChunks ?? 0,
-				hotWordEnabled: config?.hotWordEnabled ?? false,
-				hotWordPhrase: config?.hotWordPhrase ?? "send the command",
+				chunkDurationSeconds: config?.chunkDurationSeconds ?? DEFAULT_STREAMING_CONFIG.chunkDurationSeconds,
+				overlapDurationSeconds:
+					config?.overlapDurationSeconds ?? DEFAULT_STREAMING_CONFIG.overlapDurationSeconds,
+				language: config?.language ?? DEFAULT_STREAMING_CONFIG.language,
+				maxChunks: config?.maxChunks ?? DEFAULT_STREAMING_CONFIG.maxChunks,
+				hotWordEnabled: config?.hotWordEnabled ?? DEFAULT_STREAMING_CONFIG.hotWordEnabled,
+				hotWordPhrase: config?.hotWordPhrase ?? DEFAULT_STREAMING_CONFIG.hotWordPhrase,
 			}
 
 			if (this.streamingConfig.overlapDurationSeconds >= this.streamingConfig.chunkDurationSeconds) {
@@ -279,8 +274,16 @@ export class SpeechService extends EventEmitter {
 			)
 		}
 
+		// Custom glossary to help Whisper recognize technical terms and product names
+		// Include previous chunk text for better continuity in streaming mode
+		const previousText = this.streamingManager.getPreviousChunkText()
+		const prompt = previousText ? `${previousText}\n\n${WHISPER_CUSTOM_GLOSSARY}` : WHISPER_CUSTOM_GLOSSARY
+
 		// Upload WebM directly - OpenAI Whisper API accepts WebM with Opus codec
-		const text = await this.transcriptionClient.transcribe(filePath, { language })
+		const text = await this.transcriptionClient.transcribe(filePath, {
+			language,
+			prompt,
+		})
 		return text
 	}
 
@@ -320,6 +323,13 @@ export class SpeechService extends EventEmitter {
 			// Transcribe chunk (WebM works directly with OpenAI)
 			const rawText = await this.transcribeFile(chunkPath, this.streamingConfig.language)
 
+			// Skip empty transcriptions (silent audio, background noise, etc.)
+			// This is normal and shouldn't stop the streaming flow
+			if (!rawText || rawText.trim().length === 0) {
+				console.log(`[SpeechService] ⏭️ Skipping empty chunk ${chunkId} (silent audio)`)
+				return
+			}
+
 			// Deduplicate and add to session
 			const deduplicatedText = this.streamingManager.addChunkText(chunkId, rawText)
 
@@ -352,11 +362,10 @@ export class SpeechService extends EventEmitter {
 				await this.stopStreamingRecording()
 			}
 		} catch (error) {
-			console.error(`[SpeechService] Error processing chunk ${chunkId}:`, error)
-			this.emit(
-				"streamingError",
-				`Failed to process chunk: ${error instanceof Error ? error.message : "Unknown error"}`,
-			)
+			// Log error but continue processing other chunks
+			console.error(`[SpeechService] ⚠️ Error processing chunk ${chunkId} (continuing):`, error)
+			// Don't emit streamingError for individual chunk failures - just log and continue
+			// This allows the transcription to continue even if some chunks fail
 		}
 	}
 

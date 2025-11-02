@@ -40,6 +40,7 @@ import {
 } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { MicrophoneButton } from "./MicrophoneButton" // kilocode_change
+import { VolumeVisualizer } from "./VolumeVisualizer" // kilocode_change
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
 
@@ -159,6 +160,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		// kilocode_change start: Real-time speech-to-text state (moved before useEffect)
 		const [isRecording, setIsRecording] = useState(false)
 		const [streamingText, setStreamingText] = useState("")
+		const [volumeLevel, setVolumeLevel] = useState(0) // Volume level 0-1 for visualizer
 		// kilocode_change end
 
 		// Close dropdown when clicking outside.
@@ -231,6 +233,10 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				else if (message.type === "speechStreamingStarted") {
 					setIsRecording(true)
 					setStreamingText("")
+					setVolumeLevel(0)
+				} else if (message.type === "speechVolumeUpdate") {
+					// Update volume level for visualizer (0-1 scale)
+					setVolumeLevel(message.volume || 0)
 				} else if (message.type === "speechStreamingProgress") {
 					// Backend sends cumulative text, so replace entirely
 					const cumulativeText = message.text || ""
@@ -240,6 +246,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				} else if (message.type === "speechHotWordDetected") {
 					// Hot word detected - set cleaned text and auto-send
 					setIsRecording(false)
+					setVolumeLevel(0)
 					setStreamingText("")
 					const cleanedText = message.text || ""
 					setInputValue(cleanedText)
@@ -251,10 +258,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}, 100)
 				} else if (message.type === "speechStreamingStopped") {
 					setIsRecording(false)
+					setVolumeLevel(0)
 					// Final text is already in inputValue from progressive updates
 					setStreamingText("")
 				} else if (message.type === "speechStreamingError") {
 					setIsRecording(false)
+					setVolumeLevel(0)
 					setStreamingText("")
 					// Error is already displayed by extension
 				}
@@ -1436,7 +1445,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				</div>
 
 				{/* kilocode_change: position tweaked, rtl support */}
-				<div className="absolute bottom-2 end-2 z-30">
+				<div className="absolute bottom-2 end-2 z-30 flex items-center gap-1">
+					{/* kilocode_change start: Volume visualizer - leftmost in icon group when recording */}
+					{isRecording && <VolumeVisualizer volume={volumeLevel} isActive={isRecording} />}
+					{/* kilocode_change end: Volume visualizer */}
+
 					{/* kilocode_change start */}
 					{!isEditMode && <IndexingStatusBadge className={cn({ hidden: containerWidth < 235 })} />}
 
