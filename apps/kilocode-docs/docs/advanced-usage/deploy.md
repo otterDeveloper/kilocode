@@ -15,8 +15,6 @@ Deploy is built to streamline the entire process of getting an app live:
 - **Zero manual config** — Kilo Code generates and manages deployment settings  
 - **Deployment history** with logs for each build
 
-Deploy currently supports **Next.js 14 and 15**. Edge routes and environment-variable injection are not yet supported.
-
 ## Prerequisites
 
 - Kilo Code Deploy is currently only supported within **Organizations**.
