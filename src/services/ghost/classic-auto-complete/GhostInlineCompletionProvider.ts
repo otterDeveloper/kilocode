@@ -60,7 +60,18 @@ const LATENCY_SAMPLE_SIZE = 10
 export type { CostTrackingCallback, GhostPrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
 /**
- * Find a matching suggestion from the history based on current prefix and suffix
+ * Result from findMatchingSuggestion including whether this is the first time shown
+ */
+export interface MatchingSuggestionWithFirstTimeFlag extends MatchingSuggestionResult {
+	/** Whether this is the first time this suggestion is being shown (was just marked as shown) */
+	isFirstTimeShown: boolean
+}
+
+/**
+ * Find a matching suggestion from the history based on current prefix and suffix.
+ * When a match is found, it is immediately marked as shown in the cache.
+ * The isFirstTimeShown flag indicates whether this was the first retrieval.
+ *
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
  * @param suggestionsHistory - Array of previous suggestions (most recent last)
@@ -70,7 +81,7 @@ export function findMatchingSuggestion(
 	prefix: string,
 	suffix: string,
 	suggestionsHistory: FillInAtCursorSuggestion[],
-): (MatchingSuggestionResult & { isFirstTimeShown: boolean }) | null {
+): MatchingSuggestionWithFirstTimeFlag | null {
 	// Search from most recent to least recent
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
@@ -78,6 +89,7 @@ export function findMatchingSuggestion(
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
 			const isFirstTimeShown = !fillInAtCursor.shownToUser
+			// Mark as shown in the cache
 			fillInAtCursor.shownToUser = true
 			return { text: fillInAtCursor.text, matchType: "exact", isFirstTimeShown }
 		}
@@ -95,6 +107,7 @@ export function findMatchingSuggestion(
 			// Check if the typed content matches the beginning of the suggestion
 			if (fillInAtCursor.text.startsWith(typedContent)) {
 				const isFirstTimeShown = !fillInAtCursor.shownToUser
+				// Mark as shown in the cache
 				fillInAtCursor.shownToUser = true
 				// Return the remaining part of the suggestion (with already-typed portion removed)
 				return {
@@ -117,9 +130,14 @@ export function findMatchingSuggestion(
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
 			const isFirstTimeShown = !fillInAtCursor.shownToUser
+			// Mark as shown in the cache
 			fillInAtCursor.shownToUser = true
 			// Return the deleted portion plus the original suggestion text
-			return { text: deletedContent + fillInAtCursor.text, matchType: "backward_deletion", isFirstTimeShown }
+			return {
+				text: deletedContent + fillInAtCursor.text,
+				matchType: "backward_deletion",
+				isFirstTimeShown,
+			}
 		}
 	}
 
@@ -397,10 +415,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
 
 			// Check cache first - allow mid-word lookups from cache
+			// findMatchingSuggestion marks the suggestion as shown and returns isFirstTimeShown flag
 			const matchingResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 			if (matchingResult !== null) {
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
+				// Fire unique suggestion shown telemetry if this is the first time
 				if (matchingResult.isFirstTimeShown) {
 					this.telemetry?.captureUniqueSuggestionShown(telemetryContext, matchingResult.text.length, "cache")
 				}
@@ -420,9 +440,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, document.languageId)
 
+			// findMatchingSuggestion marks the suggestion as shown and returns isFirstTimeShown flag
 			const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 			if (cachedResult) {
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
+				// Fire unique suggestion shown telemetry if this is the first time
 				if (cachedResult.isFirstTimeShown) {
 					this.telemetry?.captureUniqueSuggestionShown(telemetryContext, cachedResult.text.length, "llm")
 				}
