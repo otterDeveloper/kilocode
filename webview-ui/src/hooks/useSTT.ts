@@ -92,6 +92,7 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 					if (msg.sessionId !== sessionIdRef.current) return
 
 					setRealIsRecording(false)
+					setOptimisticIsRecording(false) // Immediately sync optimistic state on stop
 					setVolume(0)
 
 					if (msg.reason === "completed") {

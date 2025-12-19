@@ -16,18 +16,21 @@ interface STTSetupPopoverProps {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	onFfmpegHelpClick: () => void
+	error?: string | null
 }
 
 interface STTSetupPopoverContentProps {
 	reason?: "openaiKeyMissing" | "ffmpegNotInstalled"
 	onFfmpegHelpClick: () => void
 	onOpenChange?: (open: boolean) => void
+	error?: string | null
 }
 
 export const STTSetupPopoverContent: React.FC<STTSetupPopoverContentProps> = ({
 	reason,
 	onFfmpegHelpClick,
 	onOpenChange,
+	error,
 }) => {
 	const { t } = useTranslation()
 	const docsUrl = buildDocLink("features/experimental/voice-transcription", "stt_setup")
@@ -58,6 +61,18 @@ export const STTSetupPopoverContent: React.FC<STTSetupPopoverContentProps> = ({
 					}}
 				/>
 			</p>
+
+			{error && (
+				<div
+					className="my-0 mb-3 p-2 rounded text-sm border"
+					style={{
+						backgroundColor: "var(--vscode-inputValidation-errorBackground, rgba(255, 0, 0, 0.1))",
+						borderColor: "var(--vscode-inputValidation-errorBorder, #ff0000)",
+						color: "var(--vscode-errorForeground, #ff0000)",
+					}}>
+					<strong>Error:</strong> {error}
+				</div>
+			)}
 
 			<ul className="my-0 mb-0 list-disc list-inside text-sm text-vscode-descriptionForeground space-y-1">
 				{reason === "openaiKeyMissing" || !reason ? (
@@ -94,6 +109,7 @@ export const STTSetupPopover: React.FC<STTSetupPopoverProps> = ({
 	open,
 	onOpenChange,
 	onFfmpegHelpClick,
+	error,
 }) => {
 	const portalContainer = useRooPortal("roo-portal")
 
@@ -120,6 +136,7 @@ export const STTSetupPopover: React.FC<STTSetupPopoverProps> = ({
 					reason={reason}
 					onFfmpegHelpClick={onFfmpegHelpClick}
 					onOpenChange={onOpenChange}
+					error={error}
 				/>
 			</PopoverContent>
 		</Popover>

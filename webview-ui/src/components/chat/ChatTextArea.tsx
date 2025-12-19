@@ -343,6 +343,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			},
 			onError: (error) => {
 				console.error("STT error:", error)
+				setSttError(error)
 				recordingStartStateRef.current = null
 			},
 		})
@@ -382,6 +383,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					afterCursor: inputValue.slice(pos),
 					position: pos,
 				}
+				setSttError(null)
 			}
 		}, [isRecording, inputValue])
 
@@ -469,6 +471,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		// kilocode_change start: Popover state for STT setup help
 		const [sttSetupPopoverOpen, setSttSetupPopoverOpen] = useState(false)
+		const [sttError, setSttError] = useState<string | null>(null)
 		const handleMicrophoneClick = useCallback(() => {
 			// If STT is unavailable, open setup popover instead of starting recording
 			if (!speechToTextStatus?.available) {
@@ -479,6 +482,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			if (isRecording) {
 				stopSTT()
 			} else {
+				setSttError(null) // Clear any previous error when starting new recording
 				startSTT(language || "en") // Pass user's language from extension state
 			}
 		}, [isRecording, startSTT, stopSTT, language, speechToTextStatus?.available])
@@ -1756,7 +1760,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							speechToTextStatus={speechToTextStatus}
 							open={sttSetupPopoverOpen}
 							onOpenChange={setSttSetupPopoverOpen}
-							onFfmpegHelpClick={handleFfmpegHelpClick}>
+							onFfmpegHelpClick={handleFfmpegHelpClick}
+							error={sttError}>
 							<MicrophoneButton
 								isRecording={isRecording}
 								onClick={handleMicrophoneClick}
