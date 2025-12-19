@@ -487,15 +487,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		}, [isRecording, startSTT, stopSTT, language, speechToTextStatus?.available])
 		// kilocode_change end: Popover state for STT setup help
-		// kilocode_change: FFmpeg help - send message to chat
-		const handleFfmpegHelpClick = useCallback(() => {
-			const helpMessage = t("kilocode:speechToText.setupPopover.ffmpegMessage")
-			setInputValue(helpMessage)
-
-			setTimeout(() => {
-				onSend()
-			}) // Trigger send after a brief delay to ensure input is set
-		}, [t, setInputValue, onSend])
 
 		// kilocode_change start: Auto-clear images when model changes to non-image-supporting
 		const prevShouldDisableImages = useRef<boolean>(shouldDisableImages)
@@ -1760,7 +1751,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							speechToTextStatus={speechToTextStatus}
 							open={sttSetupPopoverOpen}
 							onOpenChange={setSttSetupPopoverOpen}
-							onFfmpegHelpClick={handleFfmpegHelpClick}
+							setInputValue={setInputValue}
+							onSend={onSend}
 							error={sttError}>
 							<MicrophoneButton
 								isRecording={isRecording}

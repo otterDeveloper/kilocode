@@ -1,5 +1,5 @@
 // kilocode_change - new file: STT setup help popover
-import React from "react"
+import React, { useCallback } from "react"
 import { useTranslation, Trans } from "react-i18next"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui"
@@ -15,20 +15,23 @@ interface STTSetupPopoverProps {
 	}
 	open: boolean
 	onOpenChange: (open: boolean) => void
-	onFfmpegHelpClick: () => void
+	setInputValue: (value: string) => void
+	onSend: () => void
 	error?: string | null
 }
 
 interface STTSetupPopoverContentProps {
 	reason?: "openaiKeyMissing" | "ffmpegNotInstalled"
-	onFfmpegHelpClick: () => void
+	setInputValue: (value: string) => void
+	onSend: () => void
 	onOpenChange?: (open: boolean) => void
 	error?: string | null
 }
 
 export const STTSetupPopoverContent: React.FC<STTSetupPopoverContentProps> = ({
 	reason,
-	onFfmpegHelpClick,
+	setInputValue,
+	onSend,
 	onOpenChange,
 	error,
 }) => {
@@ -39,6 +42,16 @@ export const STTSetupPopoverContent: React.FC<STTSetupPopoverContentProps> = ({
 		vscode.postMessage({ type: "openExternal", url: docsUrl })
 		onOpenChange?.(false)
 	}
+
+	// kilocode_change: FFmpeg help - send message to chat
+	const handleFfmpegHelpClick = useCallback(() => {
+		const helpMessage = t("kilocode:speechToText.setupPopover.ffmpegMessage")
+		setInputValue(helpMessage)
+
+		setTimeout(() => {
+			onSend()
+		}) // Trigger send after a brief delay to ensure input is set
+	}, [t, setInputValue, onSend])
 
 	return (
 		<div className="p-4 cursor-default">
@@ -88,7 +101,7 @@ export const STTSetupPopoverContent: React.FC<STTSetupPopoverContentProps> = ({
 										href="#"
 										onClick={(e) => {
 											e.preventDefault()
-											onFfmpegHelpClick()
+											handleFfmpegHelpClick()
 											onOpenChange?.(false)
 										}}
 										className="inline"
@@ -108,7 +121,8 @@ export const STTSetupPopover: React.FC<STTSetupPopoverProps> = ({
 	speechToTextStatus,
 	open,
 	onOpenChange,
-	onFfmpegHelpClick,
+	setInputValue,
+	onSend,
 	error,
 }) => {
 	const portalContainer = useRooPortal("roo-portal")
@@ -134,7 +148,8 @@ export const STTSetupPopover: React.FC<STTSetupPopoverProps> = ({
 				container={portalContainer}>
 				<STTSetupPopoverContent
 					reason={reason}
-					onFfmpegHelpClick={onFfmpegHelpClick}
+					setInputValue={setInputValue}
+					onSend={onSend}
 					onOpenChange={onOpenChange}
 					error={error}
 				/>
